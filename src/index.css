@@ -1,0 +1,210 @@
+@import "tailwindcss";
+
+/* =====================================================================================
+   IND-QUANT V4.1 VISUAL THEME
+   Two themes driven by CSS variables, so every existing screen adapts automatically:
+     .theme-light  (default "Daylight")  — clean, high-contrast, friendly
+     .theme-dark   ("Midnight")          — deep indigo terminal look
+   ===================================================================================== */
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    font-family: "Inter", "Segoe UI", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-feature-settings: "cv11", "ss01", "tnum";
+    letter-spacing: -0.003em;
+  }
+  code, pre, .font-mono {
+    font-family: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    letter-spacing: 0;
+  }
+  button, select, input {
+    font: inherit;
+  }
+}
+
+/* ---------- MIDNIGHT (dark) ---------- */
+.theme-dark {
+  color-scheme: dark;
+  --color-slate-50: #f4f6fc;
+  --color-slate-100: #eceff8;
+  --color-slate-200: #d5dbec;
+  --color-slate-300: #b4bcd6;
+  --color-slate-400: #8f99bb;
+  --color-slate-500: #646f98;
+  --color-slate-600: #444f78;
+  --color-slate-700: #2c365b;
+  --color-slate-800: #1c2443;
+  --color-slate-900: #10162b;
+  --color-slate-950: #080c1a;
+  --app-bg: radial-gradient(1200px 600px at 10% -10%, #1b2552 0%, transparent 60%),
+    radial-gradient(900px 500px at 100% 0%, #10303f 0%, transparent 55%), #080c1a;
+  --card-shadow: 0 1px 0 rgba(255, 255, 255, 0.03) inset, 0 10px 30px -12px rgba(0, 0, 0, 0.6);
+}
+
+/* ---------- DAYLIGHT (light) — inverts the palette so dark-designed screens read well ---------- */
+.theme-light {
+  color-scheme: light;
+  --color-white: #0f172a;
+  --color-black: #ffffff;
+
+  --color-slate-50: #0b1020;
+  --color-slate-100: #111827;
+  --color-slate-200: #1f2937;
+  --color-slate-300: #334155;
+  --color-slate-400: #4b5567;
+  --color-slate-500: #667085;
+  --color-slate-600: #98a2b3;
+  --color-slate-700: #cfd6e4;
+  --color-slate-800: #e4e9f2;
+  --color-slate-900: #ffffff;
+  --color-slate-950: #f3f5fa;
+
+  --app-bg: radial-gradient(1100px 520px at 0% -10%, #e7ecff 0%, transparent 60%),
+    radial-gradient(900px 480px at 100% 0%, #dff6f1 0%, transparent 55%), #f3f5fa;
+  --card-shadow: 0 1px 2px rgba(16, 24, 40, 0.05), 0 8px 24px -14px rgba(16, 24, 40, 0.18);
+}
+
+/* Accent families: light shades become dark (text), dark shades become light (backgrounds) */
+.theme-light {
+  --color-amber-50: #451a03;  --color-amber-100: #5c2a06; --color-amber-200: #78350f; --color-amber-300: #92400e; --color-amber-400: #b45309;
+  --color-amber-600: #d97706; --color-amber-700: #fcd34d; --color-amber-800: #fde68a; --color-amber-900: #fef3c7; --color-amber-950: #fffbeb;
+
+  --color-rose-50: #4c0519; --color-rose-100: #881337; --color-rose-200: #9f1239; --color-rose-300: #be123c; --color-rose-400: #e11d48;
+  --color-rose-600: #e11d48; --color-rose-700: #fda4af; --color-rose-800: #fecdd3; --color-rose-900: #ffe4e6; --color-rose-950: #fff1f2;
+
+  --color-emerald-50: #022c22; --color-emerald-100: #064e3b; --color-emerald-200: #065f46; --color-emerald-300: #047857; --color-emerald-400: #059669;
+  --color-emerald-600: #059669; --color-emerald-700: #6ee7b7; --color-emerald-800: #a7f3d0; --color-emerald-900: #d1fae5; --color-emerald-950: #ecfdf5;
+
+  --color-sky-50: #082f49; --color-sky-100: #0c4a6e; --color-sky-200: #075985; --color-sky-300: #0369a1; --color-sky-400: #0284c7;
+  --color-sky-600: #0284c7; --color-sky-700: #7dd3fc; --color-sky-800: #bae6fd; --color-sky-900: #e0f2fe; --color-sky-950: #f0f9ff;
+
+  --color-indigo-50: #1e1b4b; --color-indigo-100: #312e81; --color-indigo-200: #3730a3; --color-indigo-300: #4338ca; --color-indigo-400: #4f46e5;
+  --color-indigo-700: #a5b4fc; --color-indigo-800: #c7d2fe; --color-indigo-900: #e0e7ff; --color-indigo-950: #eef2ff;
+
+  --color-cyan-50: #083344; --color-cyan-100: #164e63; --color-cyan-200: #155e75; --color-cyan-300: #0e7490; --color-cyan-400: #0891b2;
+  --color-cyan-700: #67e8f9; --color-cyan-800: #a5f3fc; --color-cyan-900: #cffafe; --color-cyan-950: #ecfeff;
+
+  --color-violet-50: #2e1065; --color-violet-100: #4c1d95; --color-violet-200: #5b21b6; --color-violet-300: #6d28d9; --color-violet-400: #7c3aed;
+  --color-violet-700: #c4b5fd; --color-violet-800: #ddd6fe; --color-violet-900: #ede9fe; --color-violet-950: #f5f3ff;
+
+  --color-purple-100: #581c87; --color-purple-200: #6b21a8; --color-purple-300: #7e22ce; --color-purple-400: #9333ea;
+  --color-purple-800: #e9d5ff; --color-purple-900: #f3e8ff; --color-purple-950: #faf5ff;
+
+  --color-teal-100: #134e4a; --color-teal-200: #115e59; --color-teal-300: #0f766e; --color-teal-400: #0d9488;
+  --color-teal-800: #99f6e4; --color-teal-900: #ccfbf1; --color-teal-950: #f0fdfa;
+
+  --color-orange-100: #7c2d12; --color-orange-200: #9a3412; --color-orange-300: #c2410c; --color-orange-400: #ea580c;
+  --color-orange-800: #fed7aa; --color-orange-900: #ffedd5; --color-orange-950: #fff7ed;
+
+  --color-red-100: #7f1d1d; --color-red-200: #991b1b; --color-red-300: #b91c1c; --color-red-400: #dc2626;
+  --color-red-800: #fecaca; --color-red-900: #fee2e2; --color-red-950: #fef2f2;
+
+  --color-green-100: #14532d; --color-green-200: #166534; --color-green-300: #15803d; --color-green-400: #16a34a;
+  --color-green-800: #bbf7d0; --color-green-900: #dcfce7; --color-green-950: #f0fdf4;
+
+  --color-blue-100: #1e3a8a; --color-blue-200: #1e40af; --color-blue-300: #1d4ed8; --color-blue-400: #2563eb;
+  --color-blue-800: #bfdbfe; --color-blue-900: #dbeafe; --color-blue-950: #eff6ff;
+
+  --color-yellow-100: #713f12; --color-yellow-200: #854d0e; --color-yellow-300: #a16207; --color-yellow-400: #ca8a04;
+  --color-yellow-800: #fef08a; --color-yellow-900: #fef9c3; --color-yellow-950: #fefce8;
+
+  --color-fuchsia-200: #86198f; --color-fuchsia-300: #a21caf; --color-fuchsia-400: #c026d3;
+  --color-pink-200: #9d174d; --color-pink-300: #be185d; --color-pink-400: #db2777;
+  --color-lime-200: #3f6212; --color-lime-300: #4d7c0f; --color-lime-400: #65a30d;
+}
+
+/* Keep white text on strong coloured buttons in light mode */
+.theme-light :is(.bg-indigo-600, .bg-indigo-500, .bg-emerald-600, .bg-emerald-500, .bg-sky-600, .bg-sky-500, .bg-rose-600, .bg-rose-500, .bg-violet-600, .bg-cyan-600, .bg-blue-600, .bg-teal-600).text-white {
+  color: #ffffff;
+}
+/* Dark text on amber buttons in light mode */
+.theme-light :is(.bg-amber-500, .bg-amber-400).text-slate-950,
+.theme-light :is(.bg-amber-500, .bg-amber-400) .text-slate-950 {
+  color: #1a1203;
+}
+
+/* App background + card polish (both themes) */
+.app-root {
+  background: var(--app-bg);
+  min-height: 100vh;
+}
+.app-root main [class*="rounded-xl"][class*="border"],
+.app-root main [class*="rounded-2xl"][class*="border"] {
+  box-shadow: var(--card-shadow);
+}
+.app-root main .rounded-xl {
+  border-radius: 1rem;
+}
+.app-root main .rounded-lg {
+  border-radius: 0.75rem;
+}
+
+/* Readability: tiny legacy font sizes are bumped up a little */
+.app-root .text-\[10px\] {
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+.app-root .text-\[11px\] {
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.app-root .text-xs {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* Scrollbars */
+.app-root ::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+.app-root ::-webkit-scrollbar-thumb {
+  background: color-mix(in oklab, var(--color-slate-600) 70%, transparent);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+/* Brand gradient text */
+.brand-gradient {
+  background: linear-gradient(90deg, #6366f1 0%, #06b6d4 55%, #10b981 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.brand-chip {
+  background: linear-gradient(135deg, #6366f1 0%, #06b6d4 60%, #10b981 100%);
+}
+
+/* Nav item focus ring */
+.focus-ring:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-in {
+  animation: fade-in-up 0.25s ease-out both;
+}
+
+@media print {
+  .no-print { display: none !important; }
+}
+
+/* Brand chip text stays white in both themes */
+.theme-light .brand-chip,
+.theme-light .brand-chip * {
+  color: #ffffff;
+}
+/* Solid primary buttons used by the new shell */
+.btn-primary {
+  background: linear-gradient(135deg, #4f46e5 0%, #0891b2 100%);
+  color: #ffffff !important;
+}
+.btn-primary * { color: #ffffff !important; }

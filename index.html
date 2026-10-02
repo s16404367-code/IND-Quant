@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IND-QUANT — Indian Options Research &amp; Risk Lab (Education Only)</title>
+    <meta name="description" content="Free educational options research lab for NSE F&amp;O stocks and indices. End-of-day public data. Not investment advice. Not SEBI-registered. Never places orders." />
+  </head>
+  <body class="bg-slate-950 text-slate-100 antialiased selection:bg-amber-500/30 selection:text-amber-200">
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+    <noscript>IND-QUANT needs JavaScript enabled.</noscript>
+    <script>
+      // V4.1: if this raw source page is served directly (GitHub Pages "Deploy from a branch"),
+      // the app cannot start. Instead of silently loading an OLD build from ./dist, show clear help.
+      window.addEventListener('load', function () {
+        setTimeout(function () {
+          var root = document.getElementById('root');
+          if (root && root.children.length === 0) {
+            root.innerHTML =
+              '<div style="max-width:640px;margin:60px auto;padding:28px;font-family:system-ui,Segoe UI,Arial;' +
+              'background:#fff;color:#0f172a;border:2px solid #6366f1;border-radius:16px;line-height:1.6">' +
+              '<h1 style="margin:0 0 8px;font-size:22px">IND-QUANT v4.1 — one setting to change</h1>' +
+              '<p>GitHub Pages is showing the <b>source code</b> instead of the built website.</p>' +
+              '<ol><li>Open your repository on GitHub → <b>Settings</b> → <b>Pages</b>.</li>' +
+              '<li>Under <b>Build and deployment → Source</b>, choose <b>GitHub Actions</b>.</li>' +
+              '<li>Open the <b>Actions</b> tab and wait for the green tick (3–5 minutes), then reload this page.</li></ol>' +
+              '<p style="color:#64748b;font-size:14px">Also delete any old <code>dist</code> and <code>docs</code> folders ' +
+              'from the repository — they contain the previous version.</p></div>';
+          }
+        }, 1500);
+      });
+    </script>
+  </body>
+</html>
