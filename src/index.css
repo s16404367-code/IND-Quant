@@ -1,4 +1,7 @@
-@import "tailwindcss";
+@import "tailwindcss" source(none);
+/* Only scan the source code — never build output (site/, dist/, docs/) or data files, so builds are reproducible. */
+@source "./";
+@source "../index.html";
 
 /* =====================================================================================
    IND-QUANT V4.1 VISUAL THEME

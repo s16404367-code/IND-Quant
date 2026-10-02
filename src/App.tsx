@@ -95,7 +95,6 @@ import { NewsPanel, WeatherPanel } from './components/shell/NewsWeather';
 import {
   cleanRefreshParam,
   CURRENT_BUILD_ID,
-  CURRENT_BUILT_AT,
   hardRefresh,
   RefreshButton,
   UpdateBanner,
@@ -121,7 +120,7 @@ const NAV: Array<{ id: TabId; label: string; hint: string; icon: React.Component
   { id: 'MODELS_PROB', label: 'Pricing Models', hint: 'Fair value & probabilities', icon: Cpu },
   { id: 'STRATEGY_PARETO', label: 'Strategies', hint: 'Compare structures, sizing, hedges', icon: Activity },
   { id: 'PORTFOLIO_RISK', label: 'Portfolio Risk', hint: 'VaR, stress tests (demo portfolio)', icon: Shield },
-  { id: 'REPLAY_VALIDATION', label: 'Practice & Backtest', hint: 'Replay, what-if, overfitting checks', icon: Play },
+  { id: 'REPLAY_VALIDATION', label: 'Practice & Backtest', hint: 'Test ideas on past prices, replay a day', icon: Play },
   { id: 'CONTEXT_DISCIPLINE_TAX', label: 'News, Weather & Journal', hint: 'Context, discipline, tax info', icon: Newspaper },
   { id: 'DATA_PRIVACY', label: 'Data Sources & Privacy', hint: 'Where data comes from, settings', icon: Database },
   { id: 'LEGAL', label: 'Legal Center', hint: 'Terms, risk, privacy, disclaimer', icon: Scale },
@@ -153,8 +152,8 @@ const PAGE_INTRO: Record<TabId, { title: string; subtitle: string; sample?: stri
   },
   REPLAY_VALIDATION: {
     title: 'Practice & Backtest',
-    subtitle: 'Practise on a replayed session and test whether a strategy idea is statistically real.',
-    sample: 'Replay and backtest numbers are HYPOTHETICAL and use illustrative sample data. Past or simulated results do not predict future results.',
+    subtitle: 'Learn without risking money: test simple ideas on real past prices, replay a day step by step, and check skill vs luck.',
+    sample: 'Section 1 uses REAL NSE end-of-day prices of the selected stock. The replay day and the skill-or-luck trades are ILLUSTRATIVE sample data. All results are hypothetical — past results do not predict future results.',
   },
   CONTEXT_DISCIPLINE_TAX: {
     title: 'News, Weather & Journal',
@@ -255,8 +254,15 @@ export function App() {
     loadNews()
       .then((n) => alive && setNews(n))
       .catch(() => alive && setNewsError('Headlines are unavailable right now.'));
+    // Headlines are collected every hour — pick up new ones while the page stays open.
+    const newsTimer = window.setInterval(() => {
+      loadNews(true)
+        .then((n) => alive && setNews(n))
+        .catch(() => undefined);
+    }, 15 * 60 * 1000);
     return () => {
       alive = false;
+      window.clearInterval(newsTimer);
     };
   }, []);
 
@@ -781,7 +787,6 @@ export function App() {
         <div className="space-y-0.5 text-slate-400">
           <div>
             <span className="text-slate-200 font-semibold">App version:</span> v4.1 · build <span className="font-mono">{CURRENT_BUILD_ID}</span>
-            {CURRENT_BUILT_AT && <> · built {fmtDateTime(CURRENT_BUILT_AT)}</>}
           </div>
           <div>
             <span className="text-slate-200 font-semibold">Data:</span> NSE close {fmtDate(dataTradeDate)} · prepared {fmtDateTime(dataGeneratedIso)} · source: {dataOrigin}
@@ -1124,7 +1129,7 @@ export function App() {
             />
           )}
 
-          {activeTab === 'REPLAY_VALIDATION' && <ReplayAndValidationTab capitalRupees={capitalRupees} numberFormatMode={numberFormatMode} />}
+          {activeTab === 'REPLAY_VALIDATION' && <ReplayAndValidationTab capitalRupees={capitalRupees} numberFormatMode={numberFormatMode} chain={chain} />}
 
           {activeTab === 'CONTEXT_DISCIPLINE_TAX' && (
             <>
@@ -1163,6 +1168,7 @@ export function App() {
 
           {activeTab === 'DATA_PRIVACY' && (
             <DataPrivacyAndAuditTab
+              news={news}
               meta={meta}
               decisionSnapshots={decisionSnapshots}
               onCustomSpotOverride={(newSpot) => setCustomSpotOverride(newSpot)}

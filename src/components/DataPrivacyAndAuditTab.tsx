@@ -23,7 +23,7 @@ import {
   ImmutableDecisionSnapshot,
   WHAT_THIS_SYSTEM_DOES_NOT_KNOW,
 } from '../engine/disciplineAndCopilot';
-import { fmtDateTime, MetaFile } from '../data/marketData';
+import { fmtDate, fmtDateTime, MetaFile, NewsFile } from '../data/marketData';
 
 /**
  * DATA SOURCES, PRIVACY & AUDIT (replaces the former "API Keys Vault").
@@ -35,6 +35,7 @@ import { fmtDateTime, MetaFile } from '../data/marketData';
 
 interface Props {
   meta: MetaFile | null;
+  news?: NewsFile | null;
   decisionSnapshots: ImmutableDecisionSnapshot[];
   onCustomSpotOverride: (spot: number | null) => void;
   customSpotActive: boolean;
@@ -144,6 +145,7 @@ const Collapsible: React.FC<{ title: React.ReactNode; icon: React.ReactNode; chi
 
 export const DataPrivacyAndAuditTab: React.FC<Props> = ({
   meta,
+  news,
   decisionSnapshots,
   onCustomSpotOverride,
   customSpotActive,
@@ -178,7 +180,9 @@ export const DataPrivacyAndAuditTab: React.FC<Props> = ({
   };
 
   const nseSources = (meta?.sources ?? []).filter((s) => SOURCE_LABELS[s.id]?.group === 'NSE');
-  const rssSources = (meta?.sources ?? []).filter((s) => s.id.startsWith('RSS:'));
+  // Prefer the hourly news status (latest.json); fall back to the daily data snapshot.
+  const rssSources = (news?.sources?.length ? news.sources : meta?.sources ?? []).filter((s) => s.id.startsWith('RSS:'));
+  const rssOk = rssSources.filter((s) => s.ok).length;
   const weatherSource = (meta?.sources ?? []).find((s) => s.id === 'OPEN_METEO');
 
   return (
@@ -226,14 +230,32 @@ export const DataPrivacyAndAuditTab: React.FC<Props> = ({
             <div className="flex items-center gap-2 font-semibold text-slate-100 mb-1">
               <Newspaper className="w-4 h-4 text-sky-400" /> News headlines — public RSS
             </div>
-            <p className="text-xs text-slate-400 mb-2">Headline + link only, matched to stocks by keyword. Full articles stay on the publishers&rsquo; sites.</p>
-            <ul className="space-y-1">
+            <p className="text-xs text-slate-400 mb-2">
+              Headline + link only, matched to stocks by keyword. Full articles stay on the publishers&rsquo; sites.
+            </p>
+            <div className="mb-2 p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-xs text-emerald-200 space-y-1">
+              <div>
+                <strong>No limit.</strong> {rssOk} of {rssSources.length || 38} sources are checked <strong>every hour</strong>, and every new
+                headline is saved permanently — nothing is deleted.
+              </div>
+              {news?.archive && (
+                <div>
+                  Archive: <strong>{news.archive.total.toLocaleString('en-IN')} headlines</strong> over {news.archive.days} days
+                  {news.archive.firstDay && <> (since {fmtDate(news.archive.firstDay)})</>}. Last checked {fmtDateTime(news.fetchedAtIso)}.
+                </div>
+              )}
+              <div className="text-emerald-300/70">
+                (Each publisher&rsquo;s feed only lists its most recent stories at any moment — that is why the site checks hourly and keeps
+                everything it has seen.)
+              </div>
+            </div>
+            <ul className="space-y-1 max-h-56 overflow-y-auto pr-1">
               {rssSources.map((s) => (
                 <li key={s.id} className="flex items-start gap-1.5 text-xs">
                   {s.ok ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 mt-0.5 shrink-0" /> : <XCircle className="w-3.5 h-3.5 text-rose-400 mt-0.5 shrink-0" />}
                   <span className="text-slate-300">
                     {s.id.replace('RSS:', '')}
-                    {s.items != null && <span className="text-slate-500"> · {s.items} items</span>}
+                    <span className="text-slate-500"> · {s.ok ? 'working' : 'not reachable right now'}</span>
                   </span>
                 </li>
               ))}

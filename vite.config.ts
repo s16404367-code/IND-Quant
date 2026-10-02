@@ -3,11 +3,6 @@ import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 import { existsSync, readFileSync } from 'node:fs';
 
-// A unique id for every build — the app compares it with ./version.json to detect updates.
-const BUILT_AT = new Date().toISOString();
-const SHA = (process.env.GITHUB_SHA || '').slice(0, 7);
-const BUILD_ID = `${BUILT_AT.replace(/[-:.TZ]/g, '').slice(0, 14)}${SHA ? '-' + SHA : ''}`;
-
 /**
  * 1. Emits version.json (used by the in-app "update available → refresh" feature).
  * 2. Removes the "branch-mode loader" from the BUILT index.html — that loader is only needed when
@@ -23,7 +18,10 @@ function indQuantBuildInfo(): Plugin {
         return html.replace(/<!-- IQ-BRANCH-LOADER:START -->[\s\S]*?<!-- IQ-BRANCH-LOADER:END -->/g, '');
       },
     },
-    generateBundle() {
+    generateBundle(_options, bundle) {
+      // Build id = content hash of the app bundle, so it only changes when the app code changes.
+      const entry = Object.values(bundle).find((c) => c.type === 'chunk' && c.isEntry);
+      const buildId = entry?.fileName.match(/ind-quant-([A-Za-z0-9_-]+)\.js$/)?.[1] ?? 'unknown';
       // Owner details file — read by the app at runtime (see src/config/siteConfig.ts).
       if (existsSync('site-config.json')) {
         this.emitFile({ type: 'asset', fileName: 'site-config.json', source: readFileSync('site-config.json', 'utf8') });
@@ -31,7 +29,7 @@ function indQuantBuildInfo(): Plugin {
       this.emitFile({
         type: 'asset',
         fileName: 'version.json',
-        source: JSON.stringify({ buildId: BUILD_ID, builtAtIso: BUILT_AT, app: 'IND-QUANT', version: '4.1' }, null, 2),
+        source: JSON.stringify({ buildId, builtAtIso: new Date().toISOString(), app: 'IND-QUANT', version: '4.1' }, null, 2),
       });
     },
   };
@@ -40,10 +38,6 @@ function indQuantBuildInfo(): Plugin {
 export default defineConfig({
   base: './',
   plugins: [react(), tailwindcss(), indQuantBuildInfo()],
-  define: {
-    __APP_BUILD_ID__: JSON.stringify(BUILD_ID),
-    __APP_BUILT_AT__: JSON.stringify(BUILT_AT),
-  },
   build: {
     outDir: 'dist',
     emptyOutDir: true,

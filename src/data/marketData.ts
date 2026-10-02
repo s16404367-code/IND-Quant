@@ -99,10 +99,13 @@ export interface MarketFile {
   banForDate: string | null;
 }
 
+export type NewsCategory = 'MARKETS' | 'COMPANIES' | 'ECONOMY' | 'FILINGS' | 'REGULATOR' | 'IPO' | 'COMMODITIES';
+
 export interface NewsItem {
   title: string;
   link: string;
   source: string;
+  category?: NewsCategory;
   publishedIso: string | null;
   symbols: string[];
 }
@@ -111,6 +114,17 @@ export interface NewsFile {
   fetchedAtIso: string;
   note: string;
   items: NewsItem[];
+  /** IST days included in this file (latest.json holds the newest 2 days). */
+  coversDays?: string[];
+  archive?: { total: number; days: number; firstDay: string | null };
+  sources?: Array<{ id: string; ok: boolean; items?: number; category?: string }>;
+}
+
+export interface NewsIndex {
+  updatedAtIso: string;
+  total: number;
+  firstDay: string | null;
+  days: Array<{ date: string; count: number }>;
 }
 
 export interface WeatherCity {
@@ -267,6 +281,7 @@ async function fetchJson<T>(file: string): Promise<T> {
 /** Forget every cached file so the next load fetches fresh data (used by the Refresh button). */
 export function clearDataCache() {
   cache.clear();
+  newsCache.clear();
   zipFilesPromise = null;
   resolvedBase = null;
 }
@@ -306,7 +321,56 @@ export async function fetchLatestBuildId(): Promise<string | null> {
 export const loadMeta = () => fetchJson<MetaFile>('meta.json');
 export const loadUniverse = () => fetchJson<UniverseFile>('universe.json');
 export const loadMarket = () => fetchJson<MarketFile>('market.json');
-export const loadNews = () => fetchJson<NewsFile>('news.json');
+
+// ---- News: permanent archive in data-snapshot/news/ (updated hourly by the news workflow) ----------
+const newsCache = new Map<string, Promise<unknown>>();
+
+/** Reads a file of the news archive: newest copy in the GitHub repo first, then the copy shipped with the site. */
+async function fetchNewsFile<T>(rel: string, fresh = false): Promise<T> {
+  const cacheKey = rel;
+  if (!fresh && newsCache.has(cacheKey)) return newsCache.get(cacheKey) as Promise<T>;
+  const p = (async () => {
+    const bust = `?t=${Math.floor(Date.now() / 60000)}`;
+    const urls = [
+      ...rawRepoDataBases().map((b) => `${b}news/${rel}`),
+      isBranchMode() ? `./data-snapshot/news/${rel}` : `${resolvedBase ?? './data/'}news/${rel}`,
+    ];
+    let lastErr: unknown = null;
+    for (const u of [...new Set(urls)]) {
+      try {
+        const res = await fetchWithTimeout(u + bust, 15000, { cache: 'no-store' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const ct = res.headers.get('content-type') || '';
+        if (ct.includes('text/html')) throw new Error('Got HTML instead of JSON');
+        return (await res.json()) as T;
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    throw lastErr ?? new Error('News unavailable');
+  })();
+  newsCache.set(cacheKey, p);
+  p.catch(() => newsCache.delete(cacheKey));
+  return p;
+}
+
+/** Newest headlines (last 2 days). Falls back to the news.json inside the data snapshot. */
+export async function loadNews(fresh = false): Promise<NewsFile> {
+  try {
+    return await fetchNewsFile<NewsFile>('latest.json', fresh);
+  } catch {
+    return fetchJson<NewsFile>('news.json');
+  }
+}
+
+/** List of every archived day (the archive is never trimmed). */
+export const loadNewsIndex = (fresh = false) => fetchNewsFile<NewsIndex>('index.json', fresh);
+
+/** All headlines of one IST day, e.g. '2026-09-30'. */
+export const loadNewsDay = (date: string) =>
+  /^\d{4}-\d{2}-\d{2}$/.test(date)
+    ? fetchNewsFile<{ date: string; items: NewsItem[] }>(`days/${date}.json`)
+    : Promise.reject(new Error('bad date'));
 export const loadWeatherSnapshot = () => fetchJson<WeatherFile>('weather.json');
 export const loadChain = (symbol: string) =>
   fetchJson<ChainFile>(`chains/${encodeURIComponent(symbol)}.json`);

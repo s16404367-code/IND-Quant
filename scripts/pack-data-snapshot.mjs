@@ -16,6 +16,7 @@ const walk = (dir, rel = '') => {
   for (const f of readdirSync(dir)) {
     const abs = path.join(dir, f);
     const r = rel ? `${rel}/${f}` : f;
+    if (r === 'news') continue; // the news archive lives as plain files in data-snapshot/news/
     if (statSync(abs).isDirectory()) walk(abs, r);
     else entries[r] = new Uint8Array(readFileSync(abs));
   }

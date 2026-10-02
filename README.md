@@ -78,6 +78,32 @@ The workflow (`.github/workflows/ci-and-pages.yml`) runs on every push and every
 fetches NSE data → runs the tests → builds → commits `data-snapshot/` + `site/` back (`[skip ci]`) → deploys
 via Actions **only if** Pages is set to GitHub Actions.
 
+### News: unlimited, permanent archive
+
+* `.github/workflows/news-refresh.yml` runs **every hour**. It reads 38 public feeds: ET (8 sections), Mint (4),
+  Business Standard (4), BusinessLine (4), The Hindu (2), CNBC-TV18 (2), NDTV Profit, Business Today,
+  Moneycontrol (6), NSE company announcements, results, board meetings and corporate actions, SEBI and RBI.
+* Each feed only lists its latest N stories, so the archive keeps **every** headline it has seen. Nothing is
+  deleted. Layout: `data-snapshot/news/latest.json` (newest 2 days), `index.json` (all days) and
+  `days/YYYY-MM-DD.json`.
+* The site reads the archive straight from the repository (`raw.githubusercontent.com`), so new headlines
+  appear within minutes without a rebuild.
+* Only the headline, link, publisher and time are stored (copyright stays with the publisher). Stock tagging is by
+  whole-word keyword and common-name aliases (`scripts/news-archive.mjs`), and may be imperfect.
+* Run locally with `npm run news`.
+
+### Practice & Backtest
+
+* Section 1 backtests 4 plain ideas on the **real** NSE price history of the selected symbol, against buy-and-hold:
+  buy & hold, 20-day trend, buy-the-dip and 20/50 cross (`src/engine/simpleBacktest.ts`).
+  * The signal is taken at day t's close and the trade fills at day t+1's open.
+  * Costs are ₹20 + 0.15% per side.
+  * Stocks use whole shares only.
+  * A test proves that changing future prices never changes past results.
+* Section 2 is a step-by-step replay of a sample day, with a "peek at what happened later" toggle.
+* Section 3 shows "Skill or luck?": six plain-language checks (Deflated Sharpe, PBO, White's Reality Check, and so on).
+* The page ends with a glossary.
+
 ### Staying up to date (no stale pages)
 
 * Every build gets a unique **build id** (`version.json`). The data has a `generatedAtIso` stamp (`data-snapshot/meta.json`).

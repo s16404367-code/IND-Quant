@@ -9,7 +9,7 @@
  * Usage:  node scripts/restore-data-snapshot.mjs          (only if data is missing)
  *         node scripts/restore-data-snapshot.mjs --force  (always overwrite)
  */
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { copyFileSync, cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { unzipSync } from 'fflate';
@@ -19,8 +19,18 @@ const outDir = path.join(root, 'public', 'data');
 const zipPath = path.join(root, 'data-snapshot', 'public-data.zip');
 const force = process.argv.includes('--force');
 
+/** Always copy the news archive (data-snapshot/news/) into public/data/news/ — it is updated hourly. */
+function syncNews() {
+  const src = path.join(root, 'data-snapshot', 'news');
+  if (!existsSync(path.join(src, 'latest.json'))) return;
+  cpSync(src, path.join(outDir, 'news'), { recursive: true });
+  copyFileSync(path.join(src, 'latest.json'), path.join(outDir, 'news.json'));
+  console.log('✓ News archive synced into public/data/news/');
+}
+
 if (!force && existsSync(path.join(outDir, 'meta.json'))) {
   console.log('✓ public/data already present — snapshot restore not needed.');
+  syncNews();
   process.exit(0);
 }
 if (!existsSync(zipPath)) {
@@ -39,3 +49,4 @@ for (const [name, bytes] of Object.entries(files)) {
   n++;
 }
 console.log(`✓ Restored ${n} data files from data-snapshot/public-data.zip into public/data/`);
+syncNews();

@@ -9,7 +9,8 @@
  *   3. NSE index closing file               -> index levels, India VIX, P/E, P/B  (Tier 1 — official, EOD)
  *   4. NSE F&O market-lot file              -> lot sizes for every F&O underlying (Tier 1 — official)
  *   5. NSE F&O ban list                     -> securities in ban period           (Tier 1 — official)
- *   6. Public RSS headlines (ET, Mint, BS, BusinessLine, NDTV Profit, Moneycontrol) -> headline + link only
+ *   6. Public RSS headlines from 38 feeds (publishers + NSE filings + SEBI/RBI) -> permanent archive
+ *      in data-snapshot/news/ (headline + link only; see scripts/news-archive.mjs). Skip with --no-news.
  *   7. Open-Meteo forecast API (CC BY 4.0)  -> weather for major Indian business cities
  *
  * Output: public/data/*.json  (served as same-origin static files by GitHub Pages — no CORS, no keys)
@@ -26,6 +27,7 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { unzipSync, strFromU8 } from 'fflate';
+import { refreshNewsArchive } from './news-archive.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUT_DIR = path.resolve(__dirname, '..', 'public', 'data');
@@ -64,15 +66,6 @@ const DASHBOARD_INDICES = [
   'Nifty Smallcap 100',
 ];
 
-const RSS_FEEDS = [
-  { source: 'Economic Times — Markets', url: 'https://economictimes.indiatimes.com/markets/rssfeeds/1977021501.cms' },
-  { source: 'Economic Times — Stocks', url: 'https://economictimes.indiatimes.com/markets/stocks/rssfeeds/2146842.cms' },
-  { source: 'Mint — Markets', url: 'https://www.livemint.com/rss/markets' },
-  { source: 'Business Standard — Markets', url: 'https://www.business-standard.com/rss/markets-106.rss' },
-  { source: 'BusinessLine — Markets', url: 'https://www.thehindubusinessline.com/markets/feeder/default.rss' },
-  { source: 'NDTV Profit', url: 'https://feeds.feedburner.com/ndtvprofit-latest' },
-  { source: 'Moneycontrol — Business', url: 'https://www.moneycontrol.com/rss/business.xml' },
-];
 
 const WEATHER_CITIES = [
   { city: 'Mumbai', lat: 19.076, lon: 72.8777, why: 'Financial capital; ports, refining (coastal), monsoon disruption risk' },
@@ -528,53 +521,19 @@ async function main() {
   };
   await writeJson(path.join(OUT_DIR, 'market.json'), market);
 
-  // 6) News headlines (headline + link + source only) -------------------------------------
-  console.log('> Fetching public RSS headlines...');
-  const newsItems = [];
-  for (const f of RSS_FEEDS) {
-    const xml = await fetchText(f.url, { retries: 1, timeoutMs: 15000 });
-    if (!xml) {
-      sourcesStatus.push({ id: `RSS:${f.source}`, ok: false });
-      continue;
-    }
-    const items = parseRss(xml, f.source);
-    newsItems.push(...items);
-    sourcesStatus.push({ id: `RSS:${f.source}`, ok: true, items: items.length });
-  }
-  const seen = new Set();
-  const keywordIndex = Object.entries(stockNameMap)
-    .filter(([sym]) => !INDEX_NAME_MAP[sym])
-    .map(([sym, name]) => {
-      const words = name.split(' ').filter(Boolean);
-      const key = words.length >= 2 ? words.slice(0, 2).join(' ') : words[0] || sym;
-      return { sym, key: key.length >= 4 ? key.toLowerCase() : null };
+  // 6) News headlines — unlimited permanent archive (headline + link + source only) -----------
+  if (process.argv.includes('--no-news')) {
+    console.log('> News skipped (--no-news) — handled by the hourly news workflow.');
+  } else {
+    console.log('> Fetching public news feeds into the permanent archive...');
+    const { latest, status } = await refreshNewsArchive({
+      root: path.resolve(__dirname, '..'),
+      stocks: universe,
+      seedFile: path.join(OUT_DIR, 'news.json'),
     });
-  const news = newsItems
-    .filter((n) => {
-      const k = n.title.toLowerCase();
-      if (seen.has(k)) return false;
-      seen.add(k);
-      return true;
-    })
-    .map((n) => {
-      const tl = ` ${n.title.toLowerCase()} `;
-      const symbols = new Set();
-      for (const { sym, key } of keywordIndex) {
-        if (sym.length >= 3 && new RegExp(`\\b${sym.replace(/[&]/g, '\\&')}\\b`).test(n.title)) symbols.add(sym);
-        if (key && tl.includes(` ${key}`)) symbols.add(sym);
-      }
-      if (/\b(nifty|sensex)\b/i.test(n.title) && !/bank nifty|nifty bank/i.test(n.title)) symbols.add('NIFTY');
-      if (/bank nifty|nifty bank|banknifty/i.test(n.title)) symbols.add('BANKNIFTY');
-      return { ...n, symbols: [...symbols].slice(0, 6) };
-    })
-    .sort((a, b) => ((b.publishedIso || '') > (a.publishedIso || '') ? 1 : -1))
-    .slice(0, 250);
-  await writeJson(path.join(OUT_DIR, 'news.json'), {
-    fetchedAtIso: new Date().toISOString(),
-    note: 'Headlines and links only. Copyright belongs to each publisher. Click through to read the original article.',
-    items: news,
-  });
-  console.log(`  ✓ ${news.length} headlines`);
+    sourcesStatus.push(...status);
+    await writeJson(path.join(OUT_DIR, 'news.json'), latest);
+  }
 
   // 7) Weather snapshot ---------------------------------------------------------------------
   console.log('> Fetching Open-Meteo weather snapshot...');

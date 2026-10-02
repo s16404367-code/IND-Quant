@@ -15,7 +15,8 @@
     "legal": "node scripts/export-legal-md.mjs",
     "predev": "node scripts/restore-data-snapshot.mjs",
     "prebuild": "node scripts/restore-data-snapshot.mjs",
-    "data:restore": "node scripts/restore-data-snapshot.mjs --force"
+    "data:restore": "node scripts/restore-data-snapshot.mjs --force",
+    "news": "node scripts/fetch-news.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.16.0",

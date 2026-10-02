@@ -2,9 +2,11 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { RotateCw, Sparkles, X } from 'lucide-react';
 import { clearDataCache, fetchLatestBuildId, fetchLatestDataStamp, fmtDateTime } from '../../data/marketData';
 
-/** Build id baked into this copy of the app ('dev' in unit tests). */
-export const CURRENT_BUILD_ID: string = typeof __APP_BUILD_ID__ !== 'undefined' ? __APP_BUILD_ID__ : 'dev';
-export const CURRENT_BUILT_AT: string | null = typeof __APP_BUILT_AT__ !== 'undefined' ? __APP_BUILT_AT__ : null;
+/** Build id of the running app = content hash in its own file name ('dev' in development and unit tests). */
+export function buildIdFromUrl(url: string): string {
+  return url.match(/ind-quant-([A-Za-z0-9_-]+)\.js/)?.[1] ?? url.match(/app\.js\?v=([A-Za-z0-9_-]+)/)?.[1] ?? 'dev';
+}
+export const CURRENT_BUILD_ID: string = buildIdFromUrl(import.meta.url);
 
 const CHECK_EVERY_MS = 5 * 60 * 1000; // every 5 minutes
 const FIRST_CHECK_AFTER_MS = 15 * 1000;

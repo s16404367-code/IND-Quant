@@ -1,6 +1,6 @@
 # How to put IND-QUANT on GitHub (3 easy ways)
 
-This project now has only **about 75 files**. The 224 small market-data files are packed into **one** file
+This project now has only **about 80 files**. The 224 small market-data files are packed into **one** file
 (`data-snapshot/public-data.zip`), and GitHub Actions builds the website for you. So the GitHub
 website's **100-files-per-upload limit is no longer a problem**.
 
@@ -66,6 +66,11 @@ Then do steps 7–8 from Way 1.
 
 * **Data updates by itself** every weekday evening (18:30 and 21:00 IST). You don't need to do anything.
   The workflow saves the fresh data into `data-snapshot/` and the website loads it from there.
+* **News headlines: unlimited.** A second workflow, **"Refresh news headlines (hourly, unlimited archive)"**,
+  checks 38 news sources every hour. These include Economic Times, Mint, Business Standard, BusinessLine,
+  CNBC-TV18, Moneycontrol, official NSE company filings, SEBI and RBI. Every new headline is saved in
+  `data-snapshot/news/` forever. On the site, use **Show more**, **Show all** and **Load older headlines** to go back
+  as far as you like. To fill it straight away: **Actions → Refresh news headlines → Run workflow**.
 * **Open pages update themselves.** The site checks for a new version or new data every 5 minutes, and whenever
   you return to the tab. It then shows a green "New … available" bar and refreshes after 30 seconds. You can
   turn this off under **Data & Sources → Settings**. The **Refresh** button at the top always loads the newest
