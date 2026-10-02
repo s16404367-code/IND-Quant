@@ -16,6 +16,15 @@ const cfg = {
   siteName: pick('siteName'),
   legalVersion: pick('legalVersion'),
 };
+// Values in /site-config.json (the file owners edit) override the code defaults.
+try {
+  const j = JSON.parse(await readFile(path.join(root, 'site-config.json'), 'utf8'));
+  for (const k of ['ownerDisplayName', 'contactEmail', 'jurisdictionCity', 'legalVersion', 'legalEffectiveDate']) {
+    if (typeof j[k] === 'string' && j[k].trim()) cfg[k] = j[k].trim();
+  }
+} catch {
+  /* no site-config.json — use defaults */
+}
 
 const files = { disclaimer: 'DISCLAIMER.md', risk: 'RISK_DISCLOSURE.md', terms: 'TERMS_OF_USE.md', privacy: 'PRIVACY_POLICY.md', sources: 'DATA_SOURCES.md' };
 await mkdir(path.join(root, 'LEGAL'), { recursive: true });

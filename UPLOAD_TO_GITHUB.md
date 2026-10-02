@@ -1,6 +1,6 @@
 # How to put IND-QUANT on GitHub (3 easy ways)
 
-This project now has only **about 65 files**. The 224 small market-data files are packed into **one** file
+This project now has only **about 75 files**. The 224 small market-data files are packed into **one** file
 (`data-snapshot/public-data.zip`), and GitHub Actions builds the website for you. So the GitHub
 website's **100-files-per-upload limit is no longer a problem**.
 
@@ -21,10 +21,14 @@ website's **100-files-per-upload limit is no longer a problem**.
    - If it is still missing, click **Add file → Create new file**. Type the name
      `.github/workflows/ci-and-pages.yml` (typing the `/` creates the folders). Paste in the content of that
      file from the unzipped folder and click **Commit changes**.
-7. Turn on the website: go to **Settings → Pages → Build and deployment → Source** and choose **GitHub Actions**.
-8. Go to the **Actions** tab. The workflow "Refresh NSE data, test & deploy" starts automatically. If it does
-   not, click it and press **Run workflow**. After about 3–5 minutes, it shows your site link:
-   `https://<your-username>.github.io/<repo-name>/`
+7. Turn on the website: go to **Settings → Pages → Build and deployment → Source**.
+   **Either option works now:**
+   - **Deploy from a branch** → Branch `main`, folder `/ (root)` → Save. The site uses the ready-built app in the
+     `site/` folder, so it works straight away.
+   - **GitHub Actions**: the site is rebuilt and deployed by the workflow each time.
+8. After 1–5 minutes, open `https://<your-username>.github.io/<repo-name>/`.
+   The **Actions** tab also runs the workflow "Refresh NSE data, test & publish" (press **Run workflow** if it
+   did not start). It refreshes the market data every weekday evening.
 
 > If GitHub ever says "too many files", upload in two batches. First upload the `src` folder, then
 > everything else. Each batch must have fewer than 100 files.
@@ -61,9 +65,15 @@ Then do steps 7–8 from Way 1.
 ## After it is online
 
 * **Data updates by itself** every weekday evening (18:30 and 21:00 IST). You don't need to do anything.
+  The workflow saves the fresh data into `data-snapshot/` and the website loads it from there.
+* **Open pages update themselves.** The site checks for a new version or new data every 5 minutes, and whenever
+  you return to the tab. It then shows a green "New … available" bar and refreshes after 30 seconds. You can
+  turn this off under **Data & Sources → Settings**. The **Refresh** button at the top always loads the newest
+  version and skips the browser cache.
 * If NSE cannot be reached on some day, the site uses the bundled snapshot. It never breaks.
-* **Before sharing the link**, edit `src/config/siteConfig.ts` on GitHub (click the file, then the ✏️ pencil icon).
-  Put in your name, contact e-mail and city, then **Commit changes**. The site rebuilds automatically.
+* **Before sharing the link**, edit **`site-config.json`** on GitHub (click the file, then the ✏️ pencil icon).
+  Put in your name, contact e-mail and city, then **Commit changes**. The change shows on the site within about
+  10 minutes. No rebuild is needed.
 
 ## Running it on your own computer (optional)
 
@@ -72,3 +82,13 @@ npm install
 npm run dev        # opens http://localhost:5173 (the data snapshot is unpacked automatically)
 npm run data       # optional: download the very latest NSE data
 ```
+
+---
+
+## Troubleshooting: "I still see the old page / a help box"
+
+* Click the **Refresh** button at the top of the site, or add `?refresh=1` to the end of the address.
+* Make sure the **`site`** folder (`site/app.js`, `site/app.css`, `site/version.json`) and **`index.html`** from this
+  zip are in the repository. When Pages is set to "Deploy from a branch", these files are the website.
+* Delete any old **`docs/`** or **`dist/`** folders from the repository. They contain old versions.
+* GitHub Pages can take up to 10 minutes to show a new upload.

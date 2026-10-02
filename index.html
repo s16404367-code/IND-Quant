@@ -3,33 +3,74 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
     <title>IND-QUANT — Indian Options Research &amp; Risk Lab (Education Only)</title>
     <meta name="description" content="Free educational options research lab for NSE F&amp;O stocks and indices. End-of-day public data. Not investment advice. Not SEBI-registered. Never places orders." />
-  </head>
-  <body class="bg-slate-950 text-slate-100 antialiased selection:bg-amber-500/30 selection:text-amber-200">
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-    <noscript>IND-QUANT needs JavaScript enabled.</noscript>
+    <style>
+      /* Shown only while the app is starting */
+      #iq-boot{font-family:system-ui,Segoe UI,Arial,sans-serif;color:#334155;display:flex;align-items:center;justify-content:center;min-height:100vh;gap:12px}
+      #iq-boot i{width:22px;height:22px;border:3px solid #c7d2fe;border-top-color:#4f46e5;border-radius:50%;display:inline-block;animation:iqspin 0.8s linear infinite}
+      @keyframes iqspin{to{transform:rotate(360deg)}}
+    </style>
+    <!-- IQ-BRANCH-LOADER:START -->
     <script>
-      // V4.1: if this raw source page is served directly (GitHub Pages "Deploy from a branch"),
-      // the app cannot start. Instead of silently loading an OLD build from ./dist, show clear help.
-      window.addEventListener('load', function () {
-        setTimeout(function () {
+      /*
+       * BRANCH-MODE LOADER (removed automatically from built pages).
+       * When GitHub Pages is set to "Deploy from a branch", it serves this raw file. The source code
+       * (/src/main.tsx) cannot run in a browser, so we load the ready-built copy from ./site/ instead.
+       * ./site/version.json is fetched with no caching so visitors always get the newest build.
+       */
+      (function () {
+        var started = false;
+        function showHelp() {
           var root = document.getElementById('root');
-          if (root && root.children.length === 0) {
-            root.innerHTML =
-              '<div style="max-width:640px;margin:60px auto;padding:28px;font-family:system-ui,Segoe UI,Arial;' +
-              'background:#fff;color:#0f172a;border:2px solid #6366f1;border-radius:16px;line-height:1.6">' +
-              '<h1 style="margin:0 0 8px;font-size:22px">IND-QUANT v4.1 — one setting to change</h1>' +
-              '<p>GitHub Pages is showing the <b>source code</b> instead of the built website.</p>' +
-              '<ol><li>Open your repository on GitHub → <b>Settings</b> → <b>Pages</b>.</li>' +
-              '<li>Under <b>Build and deployment → Source</b>, choose <b>GitHub Actions</b>.</li>' +
-              '<li>Open the <b>Actions</b> tab and wait for the green tick (3–5 minutes), then reload this page.</li></ol>' +
-              '<p style="color:#64748b;font-size:14px">Also delete any old <code>dist</code> and <code>docs</code> folders ' +
-              'from the repository — they contain the previous version.</p></div>';
-          }
-        }, 1500);
-      });
+          if (!root) return;
+          root.innerHTML =
+            '<div style="max-width:640px;margin:60px auto;padding:28px;font-family:system-ui,Segoe UI,Arial;' +
+            'background:#fff;color:#0f172a;border:2px solid #6366f1;border-radius:16px;line-height:1.6">' +
+            '<h1 style="margin:0 0 8px;font-size:22px">IND-QUANT could not start</h1>' +
+            '<p>The ready-built app files (<code>site/app.js</code>, <code>site/app.css</code>, <code>site/version.json</code>) ' +
+            'were not found in this repository. Please upload the <b>site</b> folder from the project zip, then reload.</p>' +
+            '<p style="color:#64748b;font-size:14px">Alternative: Settings → Pages → Source → <b>GitHub Actions</b>.</p></div>';
+        }
+        window.__iqBoot = function () {
+          if (started) return;
+          started = true;
+          window.__IQ_BRANCH_MODE__ = true;
+          fetch('./site/version.json?t=' + Date.now(), { cache: 'no-store' })
+            .then(function (r) { if (!r.ok) throw new Error('no version'); return r.json(); })
+            .then(function (v) {
+              var q = '?v=' + encodeURIComponent(v.buildId || Date.now());
+              var css = document.createElement('link');
+              css.rel = 'stylesheet';
+              css.href = './site/app.css' + q;
+              document.head.appendChild(css);
+              var js = document.createElement('script');
+              js.type = 'module';
+              js.src = './site/app.js' + q;
+              js.onerror = showHelp;
+              document.body.appendChild(js);
+            })
+            .catch(showHelp);
+        };
+        // If the source entry does not start within 2.5 s, use the ready-built copy.
+        setTimeout(function () {
+          if (!window.__IQ_APP_STARTED__) window.__iqBoot();
+        }, 2500);
+      })();
     </script>
+    <!-- IQ-BRANCH-LOADER:END -->
+  </head>
+  <body>
+    <div id="root"><div id="iq-boot"><i></i> Loading IND-QUANT…</div></div>
+    <noscript>IND-QUANT needs JavaScript enabled.</noscript>
+    <!-- IQ-BRANCH-LOADER:START -->
+    <script>
+      // The module below fails instantly when the raw repository is served → switch to the built copy at once.
+      window.__iqSrcFailed = function () { if (window.__iqBoot) window.__iqBoot(); };
+    </script>
+    <!-- IQ-BRANCH-LOADER:END -->
+    <script type="module" src="/src/main.tsx" onerror="window.__iqSrcFailed && window.__iqSrcFailed()"></script>
   </body>
 </html>

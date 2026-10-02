@@ -10,6 +10,7 @@
  *   or explicitly marked as an ESTIMATE / ASSUMPTION in the UI.
  */
 
+import { unzipSync } from 'fflate';
 import { solveImpliedVolatility } from '../engine/pricingModels';
 import type { UnderlyingMarketSnapshot } from '../engine/verifiedHistoricalFixtures';
 import type { ContractSpec } from '../engine/rulesEngine';
@@ -149,16 +150,92 @@ export interface MetaFile {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Loader — tries several base paths so it works whether GitHub Pages serves /dist, /docs or root
+// Loader — works in BOTH GitHub Pages modes:
+//   • "GitHub Actions" mode: built site with ./data/*.json next to index.html
+//   • "Deploy from a branch" mode: raw repository is served; data is unpacked in the browser from
+//     data-snapshot/public-data.zip — preferring the newest copy committed by the daily workflow
+//     (fetched from raw.githubusercontent.com, which allows cross-origin reads).
 // ---------------------------------------------------------------------------------------------
 const BASE_CANDIDATES = ['./data/', './dist/data/', './public/data/', '/data/'];
 let resolvedBase: string | null = null;
 const cache = new Map<string, Promise<unknown>>();
 
+/** Where the currently displayed data came from (shown on the Data Sources page). */
+export let dataOrigin: string = 'not loaded yet';
+
+declare global {
+  interface Window {
+    __IQ_BRANCH_MODE__?: boolean;
+  }
+}
+
+export function isBranchMode(): boolean {
+  return typeof window !== 'undefined' && !!window.__IQ_BRANCH_MODE__;
+}
+
+/** For a site at https://OWNER.github.io/REPO/ returns raw.githubusercontent.com folders of data-snapshot/. */
+export function rawRepoDataBases(): string[] {
+  if (typeof window === 'undefined') return [];
+  const m = window.location.hostname.match(/^([a-z0-9-]+)\.github\.io$/i);
+  if (!m) return [];
+  const owner = m[1];
+  const seg = window.location.pathname.split('/').filter(Boolean)[0];
+  const repo = seg && !seg.includes('.') ? seg : `${owner}.github.io`;
+  return ['main', 'master'].map((b) => `https://raw.githubusercontent.com/${owner}/${repo}/${b}/data-snapshot/`);
+}
+
+async function fetchWithTimeout(url: string, ms: number, init: RequestInit = {}): Promise<Response> {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { ...init, signal: ctrl.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
+let zipFilesPromise: Promise<Record<string, Uint8Array>> | null = null;
+function loadSnapshotZip(): Promise<Record<string, Uint8Array>> {
+  if (!zipFilesPromise) {
+    zipFilesPromise = (async () => {
+      const bust = `?t=${Math.floor(Date.now() / 60000)}`;
+      const urls = [...rawRepoDataBases().map((b) => `${b}public-data.zip`), './data-snapshot/public-data.zip'];
+      let lastErr: unknown = null;
+      for (const u of urls) {
+        try {
+          const res = await fetchWithTimeout(u + bust, 20000, { cache: 'no-store' });
+          if (!res.ok) throw new Error(`HTTP ${res.status}`);
+          const files = unzipSync(new Uint8Array(await res.arrayBuffer()));
+          const norm: Record<string, Uint8Array> = {};
+          for (const [k, v] of Object.entries(files)) norm[k.replace(/^\.\//, '')] = v;
+          if (!norm['meta.json']) throw new Error('meta.json missing in snapshot');
+          dataOrigin = u.startsWith('http') ? 'latest snapshot committed to the GitHub repository' : 'snapshot bundled with this site';
+          return norm;
+        } catch (e) {
+          lastErr = e;
+        }
+      }
+      throw lastErr ?? new Error('Data snapshot unavailable');
+    })();
+    zipFilesPromise.catch(() => {
+      zipFilesPromise = null;
+    });
+  }
+  return zipFilesPromise;
+}
+
+async function fetchFromZip<T>(file: string): Promise<T> {
+  const files = await loadSnapshotZip();
+  const bytes = files[decodeURIComponent(file)];
+  if (!bytes) throw new Error(`${file} not found in data snapshot`);
+  return JSON.parse(new TextDecoder().decode(bytes)) as T;
+}
+
 async function fetchJson<T>(file: string): Promise<T> {
   const key = file;
   if (cache.has(key)) return cache.get(key) as Promise<T>;
   const p = (async () => {
+    if (isBranchMode()) return fetchFromZip<T>(file);
     const bases = resolvedBase ? [resolvedBase] : BASE_CANDIDATES;
     let lastErr: unknown = null;
     for (const base of bases) {
@@ -169,16 +246,61 @@ async function fetchJson<T>(file: string): Promise<T> {
         if (ct.includes('text/html')) throw new Error('Got HTML instead of JSON');
         const json = (await res.json()) as T;
         resolvedBase = base;
+        dataOrigin = 'data files published with this site';
         return json;
       } catch (e) {
         lastErr = e;
       }
     }
-    throw lastErr ?? new Error('Data unavailable');
+    // Last resort: the one-file snapshot
+    try {
+      return await fetchFromZip<T>(file);
+    } catch {
+      throw lastErr ?? new Error('Data unavailable');
+    }
   })();
   cache.set(key, p);
   p.catch(() => cache.delete(key));
   return p;
+}
+
+/** Forget every cached file so the next load fetches fresh data (used by the Refresh button). */
+export function clearDataCache() {
+  cache.clear();
+  zipFilesPromise = null;
+  resolvedBase = null;
+}
+
+/** Cheap check: the generatedAtIso of the newest data available online (null if unknown). */
+export async function fetchLatestDataStamp(): Promise<string | null> {
+  const bust = `?t=${Date.now()}`;
+  const urls = isBranchMode()
+    ? [...rawRepoDataBases().map((b) => `${b}meta.json`), './data-snapshot/meta.json']
+    : [`${resolvedBase ?? './data/'}meta.json`];
+  for (const u of urls) {
+    try {
+      const res = await fetchWithTimeout(u + bust, 10000, { cache: 'no-store' });
+      if (!res.ok) continue;
+      const j = (await res.json()) as Partial<MetaFile>;
+      if (j.generatedAtIso) return j.generatedAtIso;
+    } catch {
+      /* try next */
+    }
+  }
+  return null;
+}
+
+/** The build id of the newest app version published (null if unknown). */
+export async function fetchLatestBuildId(): Promise<string | null> {
+  const url = isBranchMode() ? './site/version.json' : './version.json';
+  try {
+    const res = await fetchWithTimeout(`${url}?t=${Date.now()}`, 10000, { cache: 'no-store' });
+    if (!res.ok) return null;
+    const j = (await res.json()) as { buildId?: string };
+    return j.buildId ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export const loadMeta = () => fetchJson<MetaFile>('meta.json');

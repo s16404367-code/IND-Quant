@@ -3,7 +3,13 @@ import { ShieldAlert, Scale, FileText, Lock, Database, AlertTriangle, CheckCircl
 import { getLegalDocuments, LegalDocument } from '../../legal/legalContent';
 import { SITE_CONFIG } from '../../config/siteConfig';
 
-export const LEGAL_DOCS: LegalDocument[] = getLegalDocuments(SITE_CONFIG);
+let legalCache: { key: string; docs: LegalDocument[] } | null = null;
+/** Legal documents filled in with the current owner details (from site-config.json). */
+export function getLegalDocs(): LegalDocument[] {
+  const key = JSON.stringify(SITE_CONFIG);
+  if (!legalCache || legalCache.key !== key) legalCache = { key, docs: getLegalDocuments(SITE_CONFIG) };
+  return legalCache.docs;
+}
 export type LegalDocId = LegalDocument['id'];
 
 const CONSENT_KEY = 'indquant.legalConsent';
@@ -77,7 +83,7 @@ export const LegalCenter: React.FC<{ initial?: LegalDocId; onClose?: () => void;
   asModal,
 }) => {
   const [active, setActive] = useState<LegalDocId>(initial);
-  const doc = LEGAL_DOCS.find((d) => d.id === active) ?? LEGAL_DOCS[0];
+  const doc = getLegalDocs().find((d) => d.id === active) ?? getLegalDocs()[0];
   const consent = useMemo(readConsent, []);
 
   const body = (
@@ -85,7 +91,7 @@ export const LegalCenter: React.FC<{ initial?: LegalDocId; onClose?: () => void;
       <aside className="border-b md:border-b-0 md:border-r border-slate-800 p-3 bg-slate-950/40">
         <div className="text-[11px] uppercase tracking-wider text-slate-500 font-semibold px-2 mb-2">Legal Center</div>
         <nav className="flex md:flex-col gap-1 overflow-x-auto">
-          {LEGAL_DOCS.map((d) => {
+          {getLegalDocs().map((d) => {
             const Icon = ICONS[d.id];
             return (
               <button
@@ -216,7 +222,7 @@ export const ConsentGate: React.FC<{ onAccept: () => void }> = ({ onAccept }) =>
 
             <div className="flex flex-wrap gap-2 text-xs">
               <span className="text-slate-400 mr-1 self-center">Read in full:</span>
-              {LEGAL_DOCS.map((d) => (
+              {getLegalDocs().map((d) => (
                 <button key={d.id} onClick={() => setReading(d.id)} className="px-2.5 py-1 rounded-lg border border-slate-700 text-indigo-300 hover:bg-slate-800 flex items-center gap-1">
                   <FileText className="w-3.5 h-3.5" /> {d.short}
                 </button>

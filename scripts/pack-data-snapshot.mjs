@@ -23,4 +23,6 @@ const walk = (dir, rel = '') => {
 walk(dataDir);
 mkdirSync(path.join(root, 'data-snapshot'), { recursive: true });
 writeFileSync(path.join(root, 'data-snapshot', 'public-data.zip'), zipSync(entries, { level: 9 }));
+// Small companion file so the app can cheaply check whether newer data exists.
+writeFileSync(path.join(root, 'data-snapshot', 'meta.json'), readFileSync(path.join(dataDir, 'meta.json')));
 console.log(`✓ Packed ${Object.keys(entries).length} files into data-snapshot/public-data.zip`);

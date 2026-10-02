@@ -70,6 +70,9 @@ import {
   loadMeta,
   loadNews,
   loadUniverse,
+  dataOrigin,
+  fmtDateTime,
+  isBranchMode,
   MarketFile,
   MetaFile,
   NewsFile,
@@ -87,8 +90,17 @@ import { ContextDisciplineTaxCopilotTab } from './components/ContextDisciplineTa
 import { DataPrivacyAndAuditTab } from './components/DataPrivacyAndAuditTab';
 import { OverviewTab } from './components/OverviewTab';
 import { openStockPicker, StockPickerButton } from './components/shell/StockPicker';
-import { ConsentGate, LegalCenter, LEGAL_DOCS, LegalDocId, readConsent } from './components/shell/Legal';
+import { ConsentGate, LegalCenter, getLegalDocs, LegalDocId, readConsent } from './components/shell/Legal';
 import { NewsPanel, WeatherPanel } from './components/shell/NewsWeather';
+import {
+  cleanRefreshParam,
+  CURRENT_BUILD_ID,
+  CURRENT_BUILT_AT,
+  hardRefresh,
+  RefreshButton,
+  UpdateBanner,
+  useUpdateChecker,
+} from './components/shell/UpdateChecker';
 
 type TabId =
   | 'HOME'
@@ -191,6 +203,7 @@ export function App() {
   const [simulateDailyLossLockout, setSimulateDailyLossLockout] = useState<boolean>(false);
   const [ledgerTransactions, setLedgerTransactions] = useState<LedgerTransaction[]>(DEFAULT_PORTFOLIO_LEDGER);
   const [analysisTimeIso] = useState<string>(() => new Date().toISOString());
+  const [autoRefresh, setAutoRefresh] = useState<boolean>(true);
 
   // ---------------- Public web data (keyless) ----------------
   const [meta, setMeta] = useState<MetaFile | null>(null);
@@ -211,6 +224,8 @@ export function App() {
     if (s) setSelectedSymbol(s);
     const c = Number(lsGet('indquant.capital'));
     if (CAPITAL_OPTIONS.includes(c)) setCapitalRupees(c);
+    if (lsGet('indquant.autoRefresh') === 'off') setAutoRefresh(false);
+    cleanRefreshParam();
     setConsentOk(readConsent() !== null);
   }, []);
 
@@ -320,6 +335,7 @@ export function App() {
 
   const dataTradeDate = meta?.tradeDate ?? chain?.tradeDate ?? effectiveDateIso;
   const dataGeneratedIso = meta?.generatedAtIso ?? `${dataTradeDate}T12:30:00.000Z`;
+  const updates = useUpdateChecker(meta?.generatedAtIso ?? null);
 
   const contractSpec = useMemo(
     () => getContractSpecForDate(selectedSymbol, effectiveDateIso),
@@ -731,6 +747,21 @@ export function App() {
             className="w-full bg-slate-950 border border-slate-700 rounded-lg px-2.5 py-2 text-slate-100"
           />
         </label>
+        <label className="flex items-start gap-2 p-3 rounded-lg bg-slate-950/60 border border-emerald-500/30">
+          <input
+            type="checkbox"
+            checked={autoRefresh}
+            onChange={(e) => {
+              setAutoRefresh(e.target.checked);
+              lsSet('indquant.autoRefresh', e.target.checked ? 'on' : 'off');
+            }}
+            className="mt-0.5"
+          />
+          <span>
+            <span className="font-semibold text-slate-200 block">Refresh automatically when an update is available</span>
+            <span className="text-slate-400">Checks every 5 minutes and whenever you come back to this tab. A 30-second notice is shown first.</span>
+          </span>
+        </label>
         <label className="flex items-start gap-2 p-3 rounded-lg bg-slate-950/60 border border-slate-800">
           <input type="checkbox" checked={simulateStaleFeed} onChange={(e) => setSimulateStaleFeed(e.target.checked)} className="mt-0.5" />
           <span>
@@ -745,6 +776,36 @@ export function App() {
             <span className="text-slate-400">Practise the discipline rule that stops trading after a loss limit.</span>
           </span>
         </label>
+      </div>
+      <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800 text-xs flex flex-wrap items-center justify-between gap-3">
+        <div className="space-y-0.5 text-slate-400">
+          <div>
+            <span className="text-slate-200 font-semibold">App version:</span> v4.1 · build <span className="font-mono">{CURRENT_BUILD_ID}</span>
+            {CURRENT_BUILT_AT && <> · built {fmtDateTime(CURRENT_BUILT_AT)}</>}
+          </div>
+          <div>
+            <span className="text-slate-200 font-semibold">Data:</span> NSE close {fmtDate(dataTradeDate)} · prepared {fmtDateTime(dataGeneratedIso)} · source: {dataOrigin}
+            {isBranchMode() && ' · (site served in "Deploy from a branch" mode)'}
+          </div>
+          <div>
+            <span className="text-slate-200 font-semibold">Last update check:</span>{' '}
+            {updates.lastCheckedIso ? fmtDateTime(updates.lastCheckedIso) : 'not yet'}
+            {updates.lastCheckedIso && !updates.appUpdate && !updates.dataUpdateIso && ' — you have the latest version ✓'}
+            {(updates.appUpdate || updates.dataUpdateIso) && ' — an update is available'}
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => updates.check()}
+            disabled={updates.checking}
+            className="px-3 py-2 rounded-lg border border-slate-700 text-slate-200 hover:bg-slate-800 font-semibold"
+          >
+            {updates.checking ? 'Checking…' : 'Check for updates now'}
+          </button>
+          <button onClick={() => hardRefresh()} className="btn-primary px-3 py-2 rounded-lg font-semibold">
+            Refresh page &amp; data
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -777,6 +838,8 @@ export function App() {
           </div>
         </div>
       </div>
+
+      <UpdateBanner appUpdate={updates.appUpdate} dataUpdateIso={updates.dataUpdateIso} autoRefresh={autoRefresh} />
 
       {/* ============ 2. STICKY TOP BAR — the stock picker lives here ============ */}
       <header className="no-print sticky top-0 z-30 border-b border-slate-800 bg-slate-950/85 backdrop-blur-md">
@@ -840,6 +903,7 @@ export function App() {
               <CalendarClock className="w-4 h-4" />
               NSE end-of-day · {fmtDate(dataTradeDate)}
             </span>
+            <RefreshButton hasUpdate={updates.appUpdate || !!updates.dataUpdateIso} />
             <button
               onClick={() => {
                 const t = theme === 'light' ? 'dark' : 'light';
@@ -1128,7 +1192,7 @@ export function App() {
           <div className="space-y-2">
             <div className="font-bold text-slate-200">Legal</div>
             <ul className="space-y-1">
-              {LEGAL_DOCS.map((d) => (
+              {getLegalDocs().map((d) => (
                 <li key={d.id}>
                   <button onClick={() => openLegal(d.id)} className="hover:text-slate-100 underline-offset-2 hover:underline">
                     {d.title}
@@ -1145,7 +1209,7 @@ export function App() {
               <span className="text-slate-300">Open-Meteo.com</span> (CC BY 4.0). Headlines link to and belong to their publishers.
             </p>
             <p className="font-mono text-[11px]">
-              Legal v{SITE_CONFIG.legalVersion} · © {new Date(analysisTimeIso).getFullYear()} {SITE_CONFIG.ownerDisplayName}
+              App v4.1 ({CURRENT_BUILD_ID}) · Legal v{SITE_CONFIG.legalVersion} · © {new Date(analysisTimeIso).getFullYear()} {SITE_CONFIG.ownerDisplayName}
             </p>
           </div>
         </div>
